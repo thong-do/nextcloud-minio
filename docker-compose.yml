@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - nextcloud_data:/var/www/html
+    environment:
+      - MYSQL_HOST=db
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=nextcloud
+      - NEXTCLOUD_ADMIN_USER=admin
+      - NEXTCLOUD_ADMIN_PASSWORD=admin
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost,nextcloud.localhost
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin123
+      - AWS_DEFAULT_REGION=us-east-1
+    depends_on:
+      - db
+      - minio
+    networks:
+      - nextcloudnet
+
+  db:
+    image: mariadb:latest
+    container_name: nextcloud-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=nextcloud
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - nextcloudnet
+
+  collabora:
+    image: collabora/code:latest
+    container_name: collabora
+    restart: unless-stopped
+    environment:
+      - domain=nextcloud\\.localhost
+      - username=admin
+      - password=admin
+      - extra_params=--o:ssl.enable=false --o:ssl.termination=true
+    ports:
+      - "9980:9980"
+    cap_add:
+      - MKNOD
+    networks:
+      - nextcloudnet
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin123
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - nextcloudnet
+
+volumes:
+  nextcloud_data:
+  db_data:
+  minio_data:
+
+networks:
+  nextcloudnet:
+    driver: bridge
