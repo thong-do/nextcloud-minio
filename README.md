@@ -2,6 +2,12 @@
 
 This setup provides a complete Nextcloud instance with Collabora Office for collaborative document editing and MinIO for S3-compatible storage.
 
+## Features
+- Nextcloud with persistent storage
+- Collabora (Nextcloud Office) integration
+- MinIO S3-compatible storage
+- GitLab OAuth2 login via Social Login app
+
 ## Quick Start
 
 1. **Start the services:**
@@ -11,7 +17,7 @@ This setup provides a complete Nextcloud instance with Collabora Office for coll
 
 2. **Run the setup script:**
    ```bash
-   ./setup.sh
+   ./setup-gitlab-oauth2-complete.sh
    ```
 
 3. **Access the services:**
@@ -25,6 +31,11 @@ This setup provides a complete Nextcloud instance with Collabora Office for coll
 - **MariaDB**: Database for Nextcloud (internal)
 - **Collabora**: Office suite for document editing (port 9980)
 - **MinIO**: S3-compatible object storage (ports 9000, 9001)
+
+## Authentication Options
+
+- **Local accounts**: Default admin/admin login
+- **GitLab OAuth2**: Login with GitLab accounts (optional)
 
 ## Testing Collaborative Editing
 
@@ -79,7 +90,7 @@ This is normal - it means the service is running. The integration happens throug
 3. Ensure all containers are running: `docker-compose ps`
 
 ### S3 Storage folder not visible
-1. Run the setup script: `./setup.sh`
+1. Run the setup script: `./setup-gitlab-oauth2-complete.sh`
 2. Check external storage configuration: `./check-nextcloud-storage.sh`
 3. If still not visible, configure via web interface:
    - Go to Settings > External storage
@@ -148,10 +159,14 @@ docker exec nextcloud /var/www/html/occ files_external:applicable $MOUNT_ID --re
 - Consider setting up SSL/TLS certificates
 - Use strong database passwords
 - Regularly update the containers
+- Keep GitLab OAuth2 credentials secure
+- Use environment variables for sensitive data
 
 ## Available Scripts
 
 - **`setup.sh`** - Main setup script for both Collabora and MinIO
+- **`setup-gitlab.sh`** - Setup GitLab OAuth2 authentication only
+- **`setup-with-gitlab.sh`** - Complete setup with GitLab OAuth2 integration
 - **`test-minio.sh`** - Test MinIO S3 integration and connectivity
 - **`check-nextcloud-storage.sh`** - Check Nextcloud storage configuration
 - **`mc`** - MinIO client for direct S3 operations
@@ -163,3 +178,44 @@ Collabora supports editing:
 - **Spreadsheets**: .xlsx, .ods, .csv
 - **Presentations**: .pptx, .odp
 - **Drawings**: .odg
+
+## GitLab OAuth2 Integration
+
+### 1. Configure Social Login in Nextcloud
+- Go to **Settings → Administration → Social Login**
+- Click **Add custom OAuth2 provider**
+- Fill in:
+  - **Name:** `GitLab`
+  - **Authorize url:** `https://gitlab.com/oauth/authorize`
+  - **Token url:** `https://gitlab.com/oauth/token`
+  - **User info URL:** `https://gitlab.com/api/v4/user`
+  - **Client Id:** *(from your GitLab OAuth2 application)*
+  - **Client Secret:** *(from your GitLab OAuth2 application)*
+  - **Scope:** `read_user openid email profile`
+  - **Button style:** `Gitlab`
+- Save the provider
+
+### 2. Update Redirect URI in GitLab
+- After saving, Nextcloud will show a **redirect URI** (e.g., `http://localhost:8080/index.php/apps/sociallogin/custom_oauth2/GitLab`)
+- Copy this URI and paste it into your GitLab OAuth2 application's redirect URI field
+
+### 3. Test the Integration
+- Log out of Nextcloud
+- Go to the login page
+- You should see a **Login with GitLab** button
+- Click it to test the OAuth2 flow
+
+### Troubleshooting
+- **Scope errors:** Use exactly `read_user openid email profile`
+- **Redirect URI errors:** Use the exact URI shown in Nextcloud, no trailing slash
+- **No login button:** Make sure Social Login app is enabled, clear browser cache, and log out completely
+
+## More Documentation
+- See `GITLAB_OAUTH2_SETUP_GUIDE.md` for a full step-by-step guide
+- See `GITLAB_OAUTH2_REFERENCE.md` for a quick reference card
+
+---
+
+For Collabora and MinIO S3 setup, see previous sections in this README or the respective setup scripts.
+
+https://github.com/zorn-v/nextcloud-social-login/blob/b92d2236a9df50aa3cf029c039d77bb541d3c085/docs/sso/gitlab.md
